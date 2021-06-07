@@ -1,0 +1,42 @@
+1. (1) GIL is a mutex protecting access to application objects by locking them to allow one execution statement accessing them at a time only. It prevents multiple external 
+       processes in parallel from racing with each other to read/modify objects at the same time in unpredictable sequences, generating unexpected execution results and corrupting
+        application data.
+       
+       Example:
+       Application has a variable O = 2 and two concurrent tasks as follows:
+       Task 1: increment O by 2
+       Task 2: multiply O by 5
+       Without GIL, task 1 and 2 would compete to read current value of O, execute the associated operations to O and write result back to O respectively, in unpredictable order, 
+       resulting either of the following two cases:
+       Task 1: O = 4
+       Taks 2: O = 10
+       The final result of O could be either depending on the sequence of task 1 and 2, which is unknown to the application user.
+
+   (2) As GIL prevents concurrent processes executing tasks accessing the same application resource, introducing GIL to production applications may lose full advantage of high-end
+       multi-processor systems in certain situations and potentially result in system performance bottleneck in terms of significant signalling overhead and extra task operation time.
+   
+2. Background job queuing improves scalability of applications using external APIs by enabling offloading resource-consuming tasks from application front-end, such as use-cases 
+   like email confirmation, multimedia processing or posting to social media platforms, to delayed job queues within back-end server processes so that control would be returned 
+   to front-end and it would handle new requests promptly. This ensures less waiting time for expensive request and keeps the application in a light and responsive state.
+
+   Example:
+
+   Request process without background job queuing:
+   (1) User sends a HTTP request from application UI to application front-end web service.
+   (2) Application front-end web service receives the request and proceed sending API request to external API server.
+   (3) External API server receives API request from front-end, executing API operation, while front-end waiting for the completion and response.
+   (4) On completion of API operation, external API server persists the outcome of the task and sends outcome as response to front-end.
+   (5) Front-end receives outcome response and sends HTTP response including the outcome to application UI for user.
+   
+   In this process, the amount of time of external API server operation between step (3) and (4) is unpredictable and could potentially be long, in the meantime front-end hangs to
+   wait for the response and being unresponsive to other requests, resulting in poor user experience. 
+
+   Request process with background job queuing:
+   (1) User sends a HTTP request to application front-end web service.
+   (2) Front-end receives the request, adds the external API call to a job queue on a separate worker process and immediately responds to UI, indicating that the outcome is pending.
+   (3) The worker process takes the external API call off from the queue, sends the API request to external API server.
+   (4) The worker process persists the outcome on receiving the outcome response from external API server.
+   (5) User polls the application on a regular basis for the request state, until the expected outcome is obtained.
+
+   This process uses background job queuing to separate high-latency or long-running processes from front-end and sends immediate response to user with request state indicators 
+   (pending/outcome) so that front-end is enabled for asynchronous works, improving performance.
